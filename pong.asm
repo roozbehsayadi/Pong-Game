@@ -23,7 +23,6 @@ MAIN    PROC FAR
     mov ds, ax
                      
     call SET_GRAPHIC_MODE
-    ;call CLEAR_SCREEN
     
     move_ball_loop:
         call CLEAR_BALL
@@ -79,24 +78,11 @@ MOVE_BALL   PROC
     
 MOVE_BALL   ENDP    
 ;---------------------
-DELAY PROC
-           
-    ;mov ah, 2ch
-    ;int 21h
-    ;mov initial_time, dl
-    
-    ;delay_loop:
-        ;mov ah, 2ch
-        ;int 21h
-        ;mov current_time, dl
-        ;mov al, current_time
-        ;sub al, initial_time
-        ;cmp al, FRAMES_DELAY
-        ;jl delay_loop
+DELAY PROC       
         
     mov ah, 86h
     mov cx, 0h
-    mov dx, 0a028h
+    mov dx, 0a028h  ;wait for 41 miliseconds (for 24 fps)
     int 15h
     
     RET
