@@ -6,7 +6,7 @@ org 100h
     WINDOW_WIDTH equ 320
     WINDOW_HEIGHT equ 200                
 
-    FRAMES_DELAY equ 41 ;24 fps
+    FRAMES_DELAY equ 1 ;24 fps
     
     current_time db ?   ;used in delay function
     initial_time db ?   ;used in delay function
@@ -109,10 +109,7 @@ DRAW_BALL   PROC
         draw_ball_loop2:
             call CHECK_INSIDE_BALL
             cmp bx, 0000h
-            je pass_this_pixel
-            ;mov ah, 0ch         ;code for drawing pixel
-            ;call GET_RANDOM_COLOR
-            ;pop ax
+            je pass_this_pixel            
             mov al, ball_color_random   ;color (random)
             mov ah, 0ch         ;code for drawing pixel
             int 10h             ;interupt
@@ -144,8 +141,9 @@ GET_RANDOM_COLOR    PROC
     int 21h         ;get current time miliseconds in al
     mov al, dl
     mov ah, 0
-    mov cl, 16
-    div cl          ;we have our random number inside ah (modulus)
+    mov cl, 15
+    div cl          ;we have our random number inside ah (modulus)          
+    inc ah          ;to avoid black color for ball!
     
     mov ball_color_random, ah
     pop dx
@@ -428,6 +426,7 @@ CHECK_BALL_RACKET_COLLISION PROC    ; storing result in stack. 1 for collision a
         not ball_velocity_x             
         inc ball_velocity_x             ;negate ball_velocity_x
         inc point                       ;increase point by 1
+        call GET_RANDOM_COLOR
         jmp ball_racket_collision_end
         
     ball_racket_collision_end:         
