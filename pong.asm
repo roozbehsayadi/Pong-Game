@@ -1,7 +1,4 @@
 
-; You may customize this and other start-up templates; 
-; The location of this template is c:\emu8086\inc\0_com_template.txt
-
 org 100h
 
 .DATA
@@ -16,17 +13,17 @@ org 100h
 
     ball_center_x dw 160
     ball_center_y dw 100
-    ball_radius  dw 6
+    ball_radius dw 6
     ball_radius_square dw ? ;will be calculated in main
     
-    ball_velocity_x dw 5
+    ball_velocity_x dw -5
     ball_velocity_y dw 2
     
     right_margin dw 15
     top_margin dw 25
     bottom_margin dw 10
     left_margin dw 10
-    border_width dw 3
+    border_width dw 1
            
 .CODE 
 
@@ -46,6 +43,7 @@ MAIN    PROC FAR
     move_ball_loop:
         call CLEAR_BALL
         call MOVE_BALL
+        call CHECK_BALL_COLLISION
         call DRAW_BALL
         call DELAY
         jmp move_ball_loop
@@ -164,6 +162,92 @@ MOVE_BALL   PROC
     RET
     
 MOVE_BALL   ENDP    
+;---------------------
+CHECK_BALL_COLLISION PROC
+    
+    call CHECK_BALL_LEFT_COLLISION
+    call CHECK_BALL_TOP_COLLISION
+    call CHECK_BALL_BOTTOM_COLLISION
+    
+    RET
+    
+CHECK_BALL_COLLISION ENDP
+;---------------------
+CHECK_BALL_LEFT_COLLISION PROC
+    
+    mov bx, ball_center_x
+    sub bx, ball_radius
+    cmp bx, left_margin     ;did the ball touch the left border?
+    jle left_collided
+    jg left_collision_end
+    
+    left_collided:
+        mov ax, left_margin
+        mov ball_center_x, ax
+        mov ax, ball_radius
+        add ball_center_x, ax  ;putting ball on the left border (in case it passed it)
+        
+        mov al, -1
+        mov bx, ball_velocity_x
+        imul bx
+        xor ah, ah
+        mov ball_velocity_x, ax     ;multiplied the x velocity by -1, so the direction of it changes.
+    
+    left_collision_end:    
+        RET
+    
+CHECK_BALL_LEFT_COLLISION ENDP
+;---------------------
+CHECK_BALL_TOP_COLLISION PROC
+    
+    mov bx, ball_center_y
+    sub bx, ball_radius
+    cmp bx, top_margin      ;did the ball touch the top border?
+    jle top_collided
+    jg top_collision_end
+    
+    top_collided:
+        mov ax, top_margin
+        mov ball_center_y, ax
+        mov ax, ball_radius
+        add ball_center_y, ax   ;putting ball on the top border (in case it passed it)
+        
+        mov al, -1
+        mov bx, ball_velocity_y
+        imul bx
+        xor ah, ah
+        mov ball_velocity_y, ax     ;multiplied the y velocity by -1, so the direction of it changes.
+        
+    top_collision_end:     
+        RET
+    
+CHECK_BALL_TOP_COLLISION ENDP
+;---------------------       
+CHECK_BALL_BOTTOM_COLLISION PROC
+    
+    mov bx, ball_center_y
+    add bx, ball_radius
+    cmp bx, bottom_margin   ;did the ball touch the bottom border?
+    jge bottom_collided
+    jl bottom_collision_end
+    
+    bottom_collided:
+        mov ax, bottom_margin
+        mov ball_center_y, ax
+        mov ax, ball_radius
+        sub ball_center_y, ax
+        sub ball_center_y, ax
+        
+        mov al, -1
+        mov bx, ball_velocity_y
+        imul bx
+        xor ah, ah
+        mov ball_velocity_y, ax
+        
+    bottom_collision_end:
+        RET
+    
+CHECK_BALL_BOTTOM_COLLISION ENDP    
 ;---------------------
 DELAY PROC       
         
@@ -338,7 +422,3 @@ SET_GRAPHIC_MODE    ENDP
 END MAIN
 
 ret
-
-
-
-
