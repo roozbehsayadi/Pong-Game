@@ -2,7 +2,9 @@
  I wrote a simple one-player Pong game with 8086 assembly. This is a mini-project for *Microprocessor and Assembly Language* course in *Shahid Beheshti Univeristy*. Hope you enjoy it!
  ## Executing the program
  I used [emu8086](https://download.cnet.com/Emu8086-Microprocessor-Emulator/3000-2069_4-10392690.html) to write and test my code. Open *pong.asm* file in this program, and click *compile* to create a *.com* file.
+ 
  You'll need [Dosbox](https://www.dosbox.com/download.php?main=1) to execute this file.
+ 
  After installing, open it. Type ```mount C C:\path\to\your\file.asm``` to switch to your folder. Now you can run the program by running these commands:
 * ```C:```
 * ```pong.com```
