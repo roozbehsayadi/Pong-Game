@@ -13,17 +13,24 @@ org 100h
 
     ball_center_x dw 160
     ball_center_y dw 100
-    ball_radius dw 6
+    ball_radius dw 5
     ball_radius_square dw ? ;will be calculated in main
     
     ball_velocity_x dw -5
     ball_velocity_y dw 2
     
-    right_margin dw 15
+    right_margin dw 35
     top_margin dw 25
     bottom_margin dw 10
     left_margin dw 10
     border_width dw 1
+    
+    racket_margin dw 30
+    racket_start_x dw ?     ;will set to window_width - racket_margin - racket_width later
+    racket_start_y dw 150
+    racket_width dw 5
+    racket_height dw 25
+    racket_move_velocity dw 10
            
 .CODE 
 
@@ -34,7 +41,12 @@ MAIN    PROC FAR
     
     mov ax, ball_radius
     mul ball_radius
-    mov ball_radius_square, ax
+    mov ball_radius_square, ax  ;initializing ball_radius_square
+    
+    mov ax, WINDOW_WIDTH
+    sub ax, racket_margin
+    sub ax, racket_width
+    mov racket_start_x, ax      ;initializing racket_start_x based on window width, racket margin and racket width    
                      
     call SET_GRAPHIC_MODE
     
@@ -44,12 +56,16 @@ MAIN    PROC FAR
         call CLEAR_BALL
         call MOVE_BALL
         call CHECK_BALL_COLLISION
+        call CLEAR_RACKET
+        call CHECK_KEYBOARD_EVENTS
+        call DRAW_RACKET
         call DRAW_BALL
         call DELAY
         jmp move_ball_loop
     
-    mov ah, 4ch ;exit status
-    int 21h
+    end_program:
+        mov ah, 4ch ;exit status
+        int 21h
     
 MAIN    ENDP
 ;---------------------
@@ -61,7 +77,7 @@ DRAW_BALL   PROC
     sub dx, ball_radius         ;Initial row for drawing the ball
     
     draw_ball_loop1:
-        mov cx, ball_center_x    ;
+        mov cx, ball_center_x   ;
         sub cx, ball_radius     ;initial column for drawing the ball
         
         draw_ball_loop2:
@@ -79,7 +95,7 @@ DRAW_BALL   PROC
                 jne draw_ball_loop2
                 
                 inc dx                  ;go to next row
-                mov ax, ball_center_y    ;checking if code reached end of row
+                mov ax, ball_center_y   ;checking if code reached end of row
                 add ax, ball_radius
                 cmp dx, ax
                 jne draw_ball_loop1
@@ -163,6 +179,53 @@ MOVE_BALL   PROC
     
 MOVE_BALL   ENDP    
 ;---------------------
+CHECK_KEYBOARD_EVENTS   PROC
+    
+    mov ah, 01h
+    int 16h
+    jz racket_movement_end
+    
+    mov ah, 00h
+    int 16h
+    
+    cmp al, 'w'
+    je racket_move_up
+
+    cmp al, 's'
+    je racket_move_down
+    
+    cmp al, 'q'
+    je end_program
+    
+    racket_move_up:                       
+        mov ax, racket_move_velocity
+        sub racket_start_y, ax
+        mov ax, top_margin
+        cmp racket_start_y, ax
+        jge racket_movement_end
+        mov ax, top_margin
+        mov racket_start_y, ax
+        jmp racket_movement_end
+    
+    racket_move_down:
+        mov ax, racket_move_velocity
+        add racket_start_y, ax
+        mov ax, WINDOW_HEIGHT
+        sub ax, bottom_margin
+        sub ax, racket_height
+        cmp racket_start_y, ax
+        jle racket_movement_end
+        mov ax, WINDOW_HEIGHT
+        sub ax, bottom_margin
+        sub ax, racket_height
+        mov racket_start_y, ax
+        jmp racket_movement_end
+    
+    racket_movement_end:
+        RET
+    
+CHECK_KEYBOARD_EVENTS   ENDP    
+;---------------------
 CHECK_BALL_COLLISION PROC
     
     call CHECK_BALL_LEFT_COLLISION
@@ -185,13 +248,10 @@ CHECK_BALL_LEFT_COLLISION PROC
         mov ax, left_margin
         mov ball_center_x, ax
         mov ax, ball_radius
-        add ball_center_x, ax  ;putting ball on the left border (in case it passed it)
+        add ball_center_x, ax   ;putting ball on the left border (in case it passed it)
         
-        mov al, -1
-        mov bx, ball_velocity_x
-        imul bx
-        xor ah, ah
-        mov ball_velocity_x, ax     ;multiplied the x velocity by -1, so the direction of it changes.
+        not ball_velocity_x
+        add ball_velocity_x, 1  ;multiplied the x velocity by -1, so the direction of it changes.        
     
     left_collision_end:    
         RET
@@ -212,11 +272,8 @@ CHECK_BALL_TOP_COLLISION PROC
         mov ax, ball_radius
         add ball_center_y, ax   ;putting ball on the top border (in case it passed it)
         
-        mov al, -1
-        mov bx, ball_velocity_y
-        imul bx
-        xor ah, ah
-        mov ball_velocity_y, ax     ;multiplied the y velocity by -1, so the direction of it changes.
+        not ball_velocity_y
+        add ball_velocity_y, 1  ;multiplied the y velocity by -1, so the direction of it changes.
         
     top_collision_end:     
         RET
@@ -227,22 +284,21 @@ CHECK_BALL_BOTTOM_COLLISION PROC
     
     mov bx, ball_center_y
     add bx, ball_radius
-    cmp bx, bottom_margin   ;did the ball touch the bottom border?
+    mov cx, WINDOW_HEIGHT
+    sub cx, bottom_margin
+    cmp bx, cx   ;did the ball touch the bottom border?
     jge bottom_collided
     jl bottom_collision_end
     
     bottom_collided:
-        mov ax, bottom_margin
+        mov ax, WINDOW_HEIGHT
+        sub ax, bottom_margin
         mov ball_center_y, ax
         mov ax, ball_radius
-        sub ball_center_y, ax
-        sub ball_center_y, ax
+        sub ball_center_y, ax   ;putting ball on the bottom border (in case it passed it)
         
-        mov al, -1
-        mov bx, ball_velocity_y
-        imul bx
-        xor ah, ah
-        mov ball_velocity_y, ax
+        not ball_velocity_y
+        add ball_velocity_y, 1  ;multiplied the y velocity by -1, so the direction of it changes.
         
     bottom_collision_end:
         RET
@@ -395,6 +451,61 @@ CLEAR_BALL  PROC    ;same as draw ball, with black color
     RET
     
 CLEAR_BALL  ENDP    
+;---------------------
+CLEAR_RACKET    PROC
+    
+    mov dx, racket_start_y  ;initial row for drawing the racket
+    
+    clear_racket_loop1:
+        mov cx, racket_start_x  ;initial column for drawing the ball
+        
+        clear_racket_loop2:
+            mov ah, 0ch
+            mov al, 00h
+            int 10h
+            inc cx
+            mov ax, racket_start_x
+            add ax, racket_width
+            cmp cx, ax
+            jnz clear_racket_loop2
+            
+            inc dx
+            mov ax, racket_start_y
+            add ax, racket_height
+            cmp dx, ax
+            jnz clear_racket_loop1 
+    
+    RET
+    
+CLEAR_RACKET    ENDP
+;---------------------
+DRAW_RACKET PROC
+    
+    mov dx, racket_start_y
+    
+    draw_racket_loop1:
+        mov cx, racket_start_x
+        
+        draw_racket_loop2:
+            mov ah, 0ch
+            mov al, 0Fh
+            int 10h
+            
+            inc cx
+            mov ax, racket_start_x
+            add ax, racket_width
+            cmp cx, ax
+            jnz draw_racket_loop2
+            
+            inc dx
+            mov ax, racket_start_y
+            add ax, racket_height
+            cmp dx, ax
+            jnz draw_racket_loop1
+    
+    RET
+    
+DRAW_RACKET ENDP    
 ;---------------------
 CLEAR_SCREEN    PROC
     
