@@ -15,6 +15,9 @@ org 100h
     ball_center_y dw 100
     ball_radius  dw 7
     ball_radius_square dw ? ;will be calculated in main
+    
+    ball_velocity_x dw 5
+    ball_velocity_y dw 2
            
 .CODE 
 
@@ -78,7 +81,7 @@ DRAW_BALL   PROC
             
 DRAW_BALL   ENDP    
 ;---------------------
-CHECK_INSIDE_BALL   PROC ;checks if coordinate inside cx and dx is inside the ball's circle.
+CHECK_INSIDE_BALL   PROC ;checks if coordinate inside cx and dx is inside the ball's circle. bx=1 for yes, bx=0 for no
     
     push cx     
     push dx     ;keep row and column inside stack
@@ -87,12 +90,12 @@ CHECK_INSIDE_BALL   PROC ;checks if coordinate inside cx and dx is inside the ba
     jge cx_is_positive
     
     mov ax, ball_center_x
-    sub ax, cx   ;current_x - center_x
-    xchg ax, cx
+    sub ax, cx
+    xchg ax, cx                 ;now center_x - current_x is in cx
     jmp delta_x_is_calculated
         
     cx_is_positive: 
-        sub cx, ball_center_x
+        sub cx, ball_center_x   ;now current_x - center_x is in cx
         jmp delta_x_is_calculated
     
     delta_x_is_calculated:
@@ -105,22 +108,22 @@ CHECK_INSIDE_BALL   PROC ;checks if coordinate inside cx and dx is inside the ba
     
     mov ax, ball_center_y
     sub ax, dx
-    xchg ax, dx
+    xchg ax, dx                 ;now center_y - current_y is in cx
     jmp delta_y_is_calculated
     
     dx_is_positive:
-        sub dx, ball_center_y
+        sub dx, ball_center_y   ;now current_y - center_y is in cx
         jmp delta_y_is_calculated
     
     delta_y_is_calculated:
         mov al, dl
         mul dl          ;delta_y^2 is inside ax
-        push ax
+        push ax         ;push ax to stack
         
     calculate_distance_squared:
-        pop bx
+        pop bx                          
         pop ax
-        add bx, ax
+        add bx, ax                      ;calculate delta_x^2 + delta_y^2
         cmp bx, ball_radius_square
         jle point_is_inside_circle
         jg point_is_outside_circle
@@ -142,8 +145,10 @@ CHECK_INSIDE_BALL   ENDP
 ;---------------------
 MOVE_BALL   PROC       
     
-    add ball_center_x, 2
-    add ball_center_y, 2 
+    mov ax, ball_velocity_x
+    add ball_center_x, ax
+    mov ax, ball_velocity_y
+    add ball_center_y, ax
     
     RET
     
