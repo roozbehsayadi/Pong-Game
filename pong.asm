@@ -31,6 +31,8 @@ org 100h
     racket_width dw 7
     racket_height dw 25
     racket_move_velocity dw 10
+    
+    lost dw 0
            
 .CODE 
 
@@ -60,6 +62,7 @@ MAIN    PROC FAR
         call CHECK_BALL_COLLISION
         call DRAW_RACKET
         call DRAW_BALL
+        call HANDLE_LOSS
         call DELAY
         jmp move_ball_loop
     
@@ -177,7 +180,30 @@ MOVE_BALL   PROC
     
     RET
     
-MOVE_BALL   ENDP    
+MOVE_BALL   ENDP
+;---------------------
+HANDLE_LOSS PROC
+    
+    ;if ball_center_x + ball_radius >= WINDOW_WIDTH, lost. 
+    mov ax, ball_center_x
+    add ax, ball_radius
+    mov bx, WINDOW_WIDTH
+    cmp ax, bx
+    jge handle_loss_lost
+     
+     
+    handle_loss_lost:
+        mov lost, 1
+        jmp handle_loss_end
+        
+    handle_loss_didnt_loose:
+        mov lost, 0
+        jmp handle_loss_end
+        
+    handle_loss_end:
+        RET
+    
+HANDLE_LOSS ENDP    
 ;---------------------
 CHECK_KEYBOARD_EVENTS   PROC
     
@@ -250,9 +276,9 @@ CHECK_BALL_RACKET_COLLISION PROC    ; storing result in stack. 1 for collision a
     ;ball_x + ball_radius > racket_x
     mov ax, ball_center_x
     add ax, ball_radius     ;ax: ball_x + ball_radius
-    mov bx, racket_x        ;bx: racket_x + racket_width
+    mov bx, racket_start_x        ;bx: racket_x + racket_width
     cmp ax, bx
-    jge ball_racket_didnt_collide
+    jle ball_racket_didnt_collide
     
     ;ball_y - ball_radius < racket_y + racket_height
     mov ax, ball_center_y
@@ -275,16 +301,16 @@ CHECK_BALL_RACKET_COLLISION PROC    ; storing result in stack. 1 for collision a
         jmp ball_racket_collision_end
     
     ball_racket_did_collide:
-        cmp ball_velocity_x
+        cmp ball_velocity_x, 0          ;if ball was going left, collision is not important
         jl ball_racket_collision_end
-        not ball_velocity_x
-        inc ball_velocity_x
+        not ball_velocity_x             
+        inc ball_velocity_x             ;negate ball_velocity_x
         jmp ball_racket_collision_end
         
     ball_racket_collision_end:         
         RET
     
-CHECK_BALL_RACKET_COLLISINO ENDP    
+CHECK_BALL_RACKET_COLLISION ENDP    
 ;---------------------
 CHECK_BALL_LEFT_COLLISION PROC
     
