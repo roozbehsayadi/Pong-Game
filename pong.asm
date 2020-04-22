@@ -28,7 +28,7 @@ org 100h
     racket_margin dw 30
     racket_start_x dw ?     ;will set to window_width - racket_margin - racket_width later
     racket_start_y dw 150
-    racket_width dw 5
+    racket_width dw 7
     racket_height dw 25
     racket_move_velocity dw 10
            
@@ -55,9 +55,9 @@ MAIN    PROC FAR
     move_ball_loop:
         call CLEAR_BALL
         call MOVE_BALL
-        call CHECK_BALL_COLLISION
         call CLEAR_RACKET
         call CHECK_KEYBOARD_EVENTS
+        call CHECK_BALL_COLLISION
         call DRAW_RACKET
         call DRAW_BALL
         call DELAY
@@ -231,10 +231,60 @@ CHECK_BALL_COLLISION PROC
     call CHECK_BALL_LEFT_COLLISION
     call CHECK_BALL_TOP_COLLISION
     call CHECK_BALL_BOTTOM_COLLISION
+    call CHECK_BALL_RACKET_COLLISION
     
     RET
     
 CHECK_BALL_COLLISION ENDP
+;---------------------
+CHECK_BALL_RACKET_COLLISION PROC    ; storing result in stack. 1 for collision and 0 for not collision.
+    
+    ;ball_x - ball_radius < racket_x + racket_width
+    mov ax, ball_center_x
+    sub ax, ball_radius     ;ax: ball_x - ball_radius
+    mov bx, racket_start_x
+    add bx, racket_width    ;bx: racket_x + racket_width
+    cmp ax, bx
+    jge ball_racket_didnt_collide
+    
+    ;ball_x + ball_radius > racket_x
+    mov ax, ball_center_x
+    add ax, ball_radius     ;ax: ball_x + ball_radius
+    mov bx, racket_x        ;bx: racket_x + racket_width
+    cmp ax, bx
+    jge ball_racket_didnt_collide
+    
+    ;ball_y - ball_radius < racket_y + racket_height
+    mov ax, ball_center_y
+    sub ax, ball_radius     ;ax: ball_y - ball_radius
+    mov bx, racket_start_y
+    add bx, racket_height   ;bx: racket_y + racket_height
+    cmp ax, bx
+    jge ball_racket_didnt_collide
+    
+    ;ball_y + ball_radius > racket_y 
+    mov ax, ball_center_y
+    add ax, ball_radius     ;ax: ball_y + ball_radius
+    mov bx, racket_start_y  ;bx: racket_y
+    cmp ax, bx
+    jle ball_racket_didnt_collide
+    
+    jmp ball_racket_did_collide     
+    
+    ball_racket_didnt_collide:
+        jmp ball_racket_collision_end
+    
+    ball_racket_did_collide:
+        cmp ball_velocity_x
+        jl ball_racket_collision_end
+        not ball_velocity_x
+        inc ball_velocity_x
+        jmp ball_racket_collision_end
+        
+    ball_racket_collision_end:         
+        RET
+    
+CHECK_BALL_RACKET_COLLISINO ENDP    
 ;---------------------
 CHECK_BALL_LEFT_COLLISION PROC
     
