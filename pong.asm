@@ -33,7 +33,7 @@ org 100h
     racket_move_velocity dw 10
     
     lost dw 0
-    point dw 0
+    point dw 9
            
 .CODE 
 
@@ -66,7 +66,7 @@ MAIN    PROC FAR
         
         call CHECK_BALL_COLLISION
         
-        ;call WRITE_POINT_ON_SCREEN
+        call WRITE_POINT_ON_SCREEN
         call WRITE_POINT_ON_LED 
         
         call DRAW_RACKET
@@ -199,26 +199,54 @@ MOVE_BALL   ENDP
 ;---------------------
 WRITE_POINT_ON_SCREEN   PROC
     
-    mov ah, 0
-    mov al, 03h
-    int 10h
-    
-    mov dh, 5
-    mov dl, 120
+    mov dh, 1
+    mov dl, 59
     mov bh, 0
     mov ah, 2
-    int 10h
+    int 10h     ;set cursor position
     
-    mov al, 'c'
-    mov bh, 0
-    mov bl, 0Fh
-    mov cx, 1
-    mov ah, 09h
-    int 10h    
+    mov ax, point   ;point is stored in ax (in al to be specific)
+    mov di, 0
+    mov dx, 0 
+     
+    print_label1:
     
-    call SET_GRAPHIC_MODE
+        cmp ax, 0
+        je print_label2
+        
+        mov bx, 10
+        div bx
+        push dx
+        inc di
+        
+        xor dx, dx
+        jmp print_label1
+        
+    print_label2:
     
-    RET
+        cmp di, 0
+        je print_exit
+        
+        pop dx 
+        mov ax, dx
+        add ax, 48
+        mov bh, 0
+        mov bl, 96h
+        mov cx, 1
+        mov ah, 09h
+        int 10h
+        
+        mov dh, 1
+        mov dl, 60
+        mov bh, 0
+        mov ah, 2
+        int 10h     ;move cursor forward (DIRTY CODE ALERT)
+        
+        dec di
+        jmp print_label2
+        
+    print_exit:
+        RET
     
 WRITE_POINT_ON_SCREEN   ENDP
 ;---------------------
@@ -353,7 +381,7 @@ CHECK_BALL_RACKET_COLLISION PROC    ; storing result in stack. 1 for collision a
         jl ball_racket_collision_end
         not ball_velocity_x             
         inc ball_velocity_x             ;negate ball_velocity_x
-        inc point, 1                    ;increase point by 1
+        inc point                       ;increase point by 1
         jmp ball_racket_collision_end
         
     ball_racket_collision_end:         
@@ -649,7 +677,12 @@ SET_GRAPHIC_MODE    PROC
        
     mov ah, 00h     ;setting video mode
     mov al, 13h     ;320x200 256 colors 
-    int 10h         ;call interruption      
+    int 10h         ;call interruption
+    
+    mov ax, 1003h
+    mov bl, 00h
+    mov bh, 00h
+    int 10h         ;disable blinking for background      
     
     RET
     
