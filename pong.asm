@@ -4,7 +4,10 @@
 
 org 100h
 
-.DATA                
+.DATA
+
+    WINDOW_WIDTH equ 320
+    WINDOW_HEIGHT equ 200                
 
     FRAMES_DELAY equ 41 ;24 fps
     
@@ -13,11 +16,17 @@ org 100h
 
     ball_center_x dw 160
     ball_center_y dw 100
-    ball_radius  dw 7
+    ball_radius  dw 6
     ball_radius_square dw ? ;will be calculated in main
     
     ball_velocity_x dw 5
     ball_velocity_y dw 2
+    
+    right_margin dw 15
+    top_margin dw 25
+    bottom_margin dw 10
+    left_margin dw 10
+    border_width dw 3
            
 .CODE 
 
@@ -31,6 +40,8 @@ MAIN    PROC FAR
     mov ball_radius_square, ax
                      
     call SET_GRAPHIC_MODE
+    
+    call DRAW_BORDERS
     
     move_ball_loop:
         call CLEAR_BALL
@@ -67,13 +78,13 @@ DRAW_BALL   PROC
                 mov ax, ball_center_x    ;checking if code reached end of column
                 add ax, ball_radius    
                 cmp cx, ax
-                jnz draw_ball_loop2
+                jne draw_ball_loop2
                 
                 inc dx                  ;go to next row
                 mov ax, ball_center_y    ;checking if code reached end of row
                 add ax, ball_radius
                 cmp dx, ax
-                jnz draw_ball_loop1
+                jne draw_ball_loop1
             
         
             
@@ -163,7 +174,114 @@ DELAY PROC
     
     RET
     
-DELAY ENDP    
+DELAY ENDP
+;---------------------
+DRAW_BORDERS PROC       
+                                  
+    call DRAW_TOP_BORDER
+    call DRAW_BOTTOM_BORDER           
+    call DRAW_LEFT_BORDER
+       
+    RET                    
+    
+DRAW_BORDERS ENDP    
+;---------------------
+DRAW_LEFT_BORDER PROC
+    
+    mov dx, top_margin
+    sub dx, border_width
+    
+    left_border_loop1:
+    
+        mov cx, left_margin
+        sub cx, border_width
+        
+        left_border_loop2:
+        
+            mov ah, 0ch
+            mov al, 0Fh
+            int 10h
+            
+            inc cx
+            mov ax, left_margin
+            cmp cx, ax
+            jne left_border_loop2
+            
+            inc dx
+            mov ax, WINDOW_HEIGHT
+            sub ax, bottom_margin
+            cmp dx, ax
+            jne left_border_loop1
+    
+    RET
+    
+DRAW_LEFT_BORDER ENDP
+;---------------------
+DRAW_TOP_BORDER PROC
+    
+    mov dx, top_margin
+    sub dx, border_width
+    
+    top_border_loop1:
+    
+        mov cx, left_margin
+        sub cx, border_width
+        
+        top_border_loop2:
+        
+            mov ah, 0ch
+            mov al, 0Fh
+            int 10h
+            
+            inc cx
+            mov ax, WINDOW_WIDTH
+            sub ax, right_margin
+            add ax, border_width
+            cmp cx, ax
+            jne top_border_loop2
+            
+            inc dx
+            mov ax, top_margin
+            cmp dx, ax
+            jne top_border_loop1
+    
+    RET
+    
+DRAW_TOP_BORDER ENDP
+;---------------------
+DRAW_BOTTOM_BORDER PROC
+    
+    mov dx, WINDOW_HEIGHT
+    sub dx, bottom_margin
+    
+    bottom_border_loop1:
+        
+        mov cx, left_margin
+        sub cx, border_width
+        
+        bottom_border_loop2:
+        
+            mov ah, 0ch
+            mov al, 0Fh
+            int 10h
+            
+            inc cx
+            mov ax, WINDOW_WIDTH
+            sub ax, right_margin
+            add ax, border_width
+            cmp cx, ax
+            jne bottom_border_loop2
+            
+            inc dx
+            mov ax, WINDOW_HEIGHT
+            sub ax, bottom_margin
+            add ax, border_width
+            cmp ax, dx
+            jne bottom_border_loop1
+    
+    RET
+    
+DRAW_BOTTOM_BORDER ENDP
 ;---------------------
 CLEAR_BALL  PROC    ;same as draw ball, with black color
     
