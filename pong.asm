@@ -33,6 +33,7 @@ org 100h
     racket_move_velocity dw 10
     
     lost dw 0
+    point dw 0
            
 .CODE 
 
@@ -55,15 +56,29 @@ MAIN    PROC FAR
     call DRAW_BORDERS
     
     move_ball_loop:
+    
         call CLEAR_BALL
         call MOVE_BALL
+        
         call CLEAR_RACKET
-        call CHECK_KEYBOARD_EVENTS
+        
+        call CHECK_KEYBOARD_EVENTS 
+        
         call CHECK_BALL_COLLISION
+        
+        ;call WRITE_POINT_ON_SCREEN
+        call WRITE_POINT_ON_LED 
+        
         call DRAW_RACKET
         call DRAW_BALL
-        call HANDLE_LOSS
-        call DELAY
+        
+        call HANDLE_LOSS 
+        
+        cmp lost, 1
+        je end_program
+        
+        call DELAY        
+        
         jmp move_ball_loop
     
     end_program:
@@ -182,16 +197,49 @@ MOVE_BALL   PROC
     
 MOVE_BALL   ENDP
 ;---------------------
+WRITE_POINT_ON_SCREEN   PROC
+    
+    mov ah, 0
+    mov al, 03h
+    int 10h
+    
+    mov dh, 5
+    mov dl, 120
+    mov bh, 0
+    mov ah, 2
+    int 10h
+    
+    mov al, 'c'
+    mov bh, 0
+    mov bl, 0Fh
+    mov cx, 1
+    mov ah, 09h
+    int 10h    
+    
+    call SET_GRAPHIC_MODE
+    
+    RET
+    
+WRITE_POINT_ON_SCREEN   ENDP
+;---------------------
+WRITE_POINT_ON_LED  PROC
+    
+    mov ax, point
+    out 199, ax
+    
+    RET
+    
+WRITE_POINT_ON_LED  ENDP
+;---------------------
 HANDLE_LOSS PROC
     
     ;if ball_center_x + ball_radius >= WINDOW_WIDTH, lost. 
     mov ax, ball_center_x
     add ax, ball_radius
-    mov bx, WINDOW_WIDTH
-    cmp ax, bx
-    jge handle_loss_lost
-     
-     
+    cmp ax, WINDOW_WIDTH
+    jge handle_loss_lost                                                       
+          
+    jmp handle_loss_didnt_loose
     handle_loss_lost:
         mov lost, 1
         jmp handle_loss_end
@@ -305,6 +353,7 @@ CHECK_BALL_RACKET_COLLISION PROC    ; storing result in stack. 1 for collision a
         jl ball_racket_collision_end
         not ball_velocity_x             
         inc ball_velocity_x             ;negate ball_velocity_x
+        inc point, 1                    ;increase point by 1
         jmp ball_racket_collision_end
         
     ball_racket_collision_end:         
