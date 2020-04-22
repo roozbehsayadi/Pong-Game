@@ -6,7 +6,7 @@ org 100h
     WINDOW_WIDTH equ 320
     WINDOW_HEIGHT equ 200                
 
-    FRAMES_DELAY equ 1 ;24 fps
+    FRAMES_DELAY equ 41 ;24 fps
     
     current_time db ?   ;used in delay function
     initial_time db ?   ;used in delay function
