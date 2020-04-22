@@ -19,6 +19,8 @@ org 100h
     ball_velocity_x dw -5
     ball_velocity_y dw 2
     
+    ball_color_random db 0Fh
+    
     right_margin dw 35
     top_margin dw 25
     bottom_margin dw 10
@@ -33,7 +35,8 @@ org 100h
     racket_move_velocity dw 10
     
     lost dw 0
-    point dw 9
+    win dw 0
+    point dw 0
            
 .CODE 
 
@@ -72,10 +75,15 @@ MAIN    PROC FAR
         call DRAW_RACKET
         call DRAW_BALL
         
-        call HANDLE_LOSS 
+        call HANDLE_LOSS
         
         cmp lost, 1
         je end_program
+        
+        call CHECK_WIN
+        
+        cmp win, 1
+        je end_program 
         
         call DELAY        
         
@@ -102,8 +110,11 @@ DRAW_BALL   PROC
             call CHECK_INSIDE_BALL
             cmp bx, 0000h
             je pass_this_pixel
+            ;mov ah, 0ch         ;code for drawing pixel
+            ;call GET_RANDOM_COLOR
+            ;pop ax
+            mov al, ball_color_random   ;color (random)
             mov ah, 0ch         ;code for drawing pixel
-            mov al, 0Fh         ;color (white)
             int 10h             ;interupt
             pass_this_pixel:
                 inc cx              ;go to next column
@@ -123,6 +134,26 @@ DRAW_BALL   PROC
     RET
             
 DRAW_BALL   ENDP    
+;---------------------
+GET_RANDOM_COLOR    PROC
+    
+    push cx
+    push dx 
+    
+    mov ah, 2ch
+    int 21h         ;get current time miliseconds in al
+    mov al, dl
+    mov ah, 0
+    mov cl, 16
+    div cl          ;we have our random number inside ah (modulus)
+    
+    mov ball_color_random, ah
+    pop dx
+    pop cx  
+    
+    RET
+    
+GET_RANDOM_COLOR    ENDP
 ;---------------------
 CHECK_INSIDE_BALL   PROC ;checks if coordinate inside cx and dx is inside the ball's circle. bx=1 for yes, bx=0 for no
     
@@ -231,10 +262,10 @@ WRITE_POINT_ON_SCREEN   PROC
         mov ax, dx
         add ax, 48
         mov bh, 0
-        mov bl, 96h
+        mov bl, 046h
         mov cx, 1
         mov ah, 09h
-        int 10h
+        int 10h     ;write it
         
         mov dh, 1
         mov dl, 60
@@ -280,6 +311,21 @@ HANDLE_LOSS PROC
         RET
     
 HANDLE_LOSS ENDP    
+;---------------------
+CHECK_WIN   PROC
+    
+    cmp point, 30
+    jge check_win_won
+    jl check_win_end
+    
+    check_win_won:
+        mov win, 1
+        jmp check_win_end
+        
+    check_win_end:
+        RET
+    
+CHECK_WIN   ENDP    
 ;---------------------
 CHECK_KEYBOARD_EVENTS   PROC
     
