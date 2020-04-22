@@ -11,9 +11,10 @@ org 100h
     current_time db ?   ;used in delay function
     initial_time db ?   ;used in delay function
 
-    ball_start_x dw 160
-    ball_start_y dw 100
-    ball_radius  dw 3
+    ball_center_x dw 160
+    ball_center_y dw 100
+    ball_radius  dw 7
+    ball_radius_square dw ? ;will be calculated in main
            
 .CODE 
 
@@ -21,6 +22,10 @@ MAIN    PROC FAR
 
     mov ax, @DATA
     mov ds, ax
+    
+    mov ax, ball_radius
+    mul ball_radius
+    mov ball_radius_square, ax
                      
     call SET_GRAPHIC_MODE
     
@@ -40,28 +45,32 @@ DRAW_BALL   PROC
     
     ;call SET_GRAPHIC_MODE
        
-    mov dx, ball_start_y        ;
+    mov dx, ball_center_y       ;
     sub dx, ball_radius         ;Initial row for drawing the ball
     
     draw_ball_loop1:
-        mov cx, ball_start_x    ;
+        mov cx, ball_center_x    ;
         sub cx, ball_radius     ;initial column for drawing the ball
         
         draw_ball_loop2:
+            call CHECK_INSIDE_BALL
+            cmp bx, 0000h
+            je pass_this_pixel
             mov ah, 0ch         ;code for drawing pixel
             mov al, 0Fh         ;color (white)
             int 10h             ;interupt
-            inc cx              ;go to next column
-            mov ax, ball_start_x    ;checking if code reached end of column
-            add ax, ball_radius    
-            cmp cx, ax
-            jnz draw_ball_loop2
-            
-            inc dx                  ;go to next tow
-            mov ax, ball_start_y    ;checking if code reached end of row
-            add ax, ball_radius
-            cmp dx, ax
-            jnz draw_ball_loop1
+            pass_this_pixel:
+                inc cx              ;go to next column
+                mov ax, ball_center_x    ;checking if code reached end of column
+                add ax, ball_radius    
+                cmp cx, ax
+                jnz draw_ball_loop2
+                
+                inc dx                  ;go to next row
+                mov ax, ball_center_y    ;checking if code reached end of row
+                add ax, ball_radius
+                cmp dx, ax
+                jnz draw_ball_loop1
             
         
             
@@ -69,10 +78,72 @@ DRAW_BALL   PROC
             
 DRAW_BALL   ENDP    
 ;---------------------
+CHECK_INSIDE_BALL   PROC ;checks if coordinate inside cx and dx is inside the ball's circle.
+    
+    push cx     
+    push dx     ;keep row and column inside stack
+    
+    cmp cx, ball_center_x   ;check if current point is left or right of center
+    jge cx_is_positive
+    
+    mov ax, ball_center_x
+    sub ax, cx   ;current_x - center_x
+    xchg ax, cx
+    jmp delta_x_is_calculated
+        
+    cx_is_positive: 
+        sub cx, ball_center_x
+        jmp delta_x_is_calculated
+    
+    delta_x_is_calculated:
+        mov al, cl
+        mul cl          ;delta_x^2 inside ax
+        push ax         ;push ax to stack
+        
+    cmp dx, ball_center_y   ;check if current point is up or down of center
+    jge dx_is_positive
+    
+    mov ax, ball_center_y
+    sub ax, dx
+    xchg ax, dx
+    jmp delta_y_is_calculated
+    
+    dx_is_positive:
+        sub dx, ball_center_y
+        jmp delta_y_is_calculated
+    
+    delta_y_is_calculated:
+        mov al, dl
+        mul dl          ;delta_y^2 is inside ax
+        push ax
+        
+    calculate_distance_squared:
+        pop bx
+        pop ax
+        add bx, ax
+        cmp bx, ball_radius_square
+        jle point_is_inside_circle
+        jg point_is_outside_circle
+        
+    point_is_inside_circle:
+        mov bx, 1
+        jmp check_inside_ball_exit
+    
+    point_is_outside_circle:
+        mov bx, 0
+        jmp check_inside_ball_exit         
+
+    check_inside_ball_exit:
+        pop dx
+        pop cx    
+        RET
+    
+CHECK_INSIDE_BALL   ENDP    
+;---------------------
 MOVE_BALL   PROC       
     
-    add ball_start_x, 2
-    add ball_start_y, 2 
+    add ball_center_x, 2
+    add ball_center_y, 2 
     
     RET
     
@@ -91,11 +162,11 @@ DELAY ENDP
 ;---------------------
 CLEAR_BALL  PROC    ;same as draw ball, with black color
     
-    mov dx, ball_start_y        ;
+    mov dx, ball_center_y        ;
     sub dx, ball_radius         ;Initial row for drawing the ball
     
     clear_ball_loop1:
-        mov cx, ball_start_x    ;
+        mov cx, ball_center_x    ;
         sub cx, ball_radius     ;initial column for drawing the ball
         
         clear_ball_loop2:
@@ -103,13 +174,13 @@ CLEAR_BALL  PROC    ;same as draw ball, with black color
             mov al, 00h         ;color (black)
             int 10h             ;interupt
             inc cx              ;go to next column
-            mov ax, ball_start_x    ;checking if code reached end of column
+            mov ax, ball_center_x    ;checking if code reached end of column
             add ax, ball_radius    
             cmp cx, ax
             jnz clear_ball_loop2
             
             inc dx                  ;go to next tow
-            mov ax, ball_start_y    ;checking if code reached end of row
+            mov ax, ball_center_y    ;checking if code reached end of row
             add ax, ball_radius
             cmp dx, ax
             jnz clear_ball_loop1
